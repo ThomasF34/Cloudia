@@ -1,0 +1,14 @@
+.env.cloud
+.env.jellyfin
+.env.torrent
+.env
+.env.auth.db
+
+authelia/config/secrets/jwt
+authelia/config/secrets/session
+authelia/config/secrets/notifier
+authelia/config/secrets/redis
+authelia/config/secrets/postgres
+authelia/config/users_database.yml
+
+letsencrypt/

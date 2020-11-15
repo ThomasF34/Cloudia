@@ -1,0 +1,177 @@
+version: '3.8'
+
+networks:
+  net:
+    driver: bridge
+
+services:
+  server:
+    image: traefik
+    # Enables the web UI and tells Traefik to listen to docker
+    command:
+      - --api.insecure=true
+      - --providers.docker
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.web.http.redirections.entrypoint.permanent=true
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+      - "--certificatesresolvers.myresolver.acme.email=${CERTIFICATE_EMAIL}"
+      - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
+    ports:
+      - 8080:8080
+      - 443:443
+      - 80:80
+    networks:
+      - net
+    volumes:
+      - ./letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - authelia
+  
+  authelia_db:
+    image: postgres
+    networks:
+      - net
+    volumes:
+      - /home/pi/authelia/db:/var/lib/mysql
+    env_file:
+      - .env.auth.db
+    restart: on-failure
+  authelia_redis:
+    image: redis:alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - /home/pi/authelia/redis:/data
+    networks:
+      - net
+    expose:
+      - 6379
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/London
+  authelia:
+    image: authelia/authelia
+    container_name: authelia
+    volumes:
+      - ./authelia/config:/config
+    env_file:
+      - .env.auth
+    networks:
+      - net
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.authelia.rule=Host(`login.${HOST}`)'
+      - 'traefik.http.routers.authelia.entrypoints=websecure'
+      - traefik.http.routers.authelia.tls.certresolver=myresolver
+    expose:
+      - 9091
+    depends_on:
+      - authelia_db
+      - authelia_redis
+    restart: unless-stopped
+    environment:
+      - TZ=Europe/London
+
+# Cloud configuration
+  nextcloud_db:
+    image: postgres
+    networks:
+      - net
+    volumes:
+      - /media/Data/Nextcloud/db:/var/lib/mysql
+    env_file:
+      - .env.cloud
+    restart: on-failure
+  cloud:
+    image: nextcloud
+    networks:
+      - net
+    volumes:
+      - /media/Data/Nextcloud/data:/var/www/html
+    restart: on-failure
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.cloud.rule=Host(`cloud.${HOST}`)
+      - traefik.http.routers.cloud.entrypoints=websecure
+      - traefik.http.routers.cloud.tls.certresolver=myresolver
+      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${HOST}/'
+      - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
+      - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
+      - traefik.http.routers.cloud.middlewares=authelia
+    depends_on:
+      - nextcloud_db
+
+# Jellyfin configuration
+  media:
+    image: linuxserver/jellyfin
+    volumes:
+      - /home/pi/jellyfin/:/config
+      - /home/pi/jellyfin/cache:/cache
+      - /media/Data:/media
+    networks:
+      - net
+    env_file:
+      - .env.jellyfin
+    restart: always
+    devices:
+      - "/dev/video10:/dev/video10"
+      - "/dev/video11:/dev/video11"
+      - "/dev/video12:/dev/video12"
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.media.rule=Host(`media.${HOST}`)
+      - traefik.http.routers.media.entrypoints=websecure
+      - traefik.http.routers.media.tls.certresolver=myresolver
+      - traefik.http.services.media.loadbalancer.server.port=8096
+
+  torrent:
+    image: haugene/transmission-openvpn:latest-armhf
+    networks:
+      - net
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - /media/Data:/data
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - .env.torrent
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.torrent.rule=Host(`torrent.${HOST}`)
+      - traefik.http.routers.torrent.entrypoints=websecure
+      - traefik.http.routers.torrent.tls.certresolver=myresolver
+      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${HOST}/'
+      - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
+      - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
+      - traefik.http.routers.torrent.middlewares=authelia
+      - traefik.http.services.torrent.loadbalancer.server.port=9091
+  searcher:
+    image: nelands/autorrent:latest
+    environment:
+      - TRANSMISSION_ADDR=torrent
+      - PORT=3000
+    networks:
+      - net
+    links:
+      - torrent
+    restart: always
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.searcher.rule=Host(`searcher.${HOST}`)
+      - traefik.http.routers.searcher.entrypoints=websecure
+      - traefik.http.routers.searcher.tls.certresolver=myresolver
+      - traefik.http.services.searcher.loadbalancer.server.port=3000
+      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${HOST}/'
+      - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
+      - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
+      - traefik.http.routers.searcher.middlewares=authelia
+
