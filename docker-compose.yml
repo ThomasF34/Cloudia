@@ -88,6 +88,8 @@ services:
     restart: on-failure
   cloud:
     image: nextcloud
+    environment:
+      - POSTGRES_HOST=nextcloud_db
     env_file:
       - .env.cloud
     networks:
