@@ -65,7 +65,7 @@ services:
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.authelia.rule=Host(`login.${HOST}`)'
-      - 'traefik.http.routers.authelia.entrypoints=websecure'
+      - 'traefik.http.routers.authelia.entrypoints=web'
       - traefik.http.routers.authelia.tls.certresolver=myresolver
     expose:
       - 9091
@@ -88,6 +88,8 @@ services:
     restart: on-failure
   cloud:
     image: nextcloud
+    env_file:
+      - .env.cloud
     networks:
       - net
     volumes:
@@ -98,10 +100,6 @@ services:
       - traefik.http.routers.cloud.rule=Host(`cloud.${HOST}`)
       - traefik.http.routers.cloud.entrypoints=websecure
       - traefik.http.routers.cloud.tls.certresolver=myresolver
-      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${HOST}/'
-      - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
-      - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
-      - traefik.http.routers.cloud.middlewares=authelia
     depends_on:
       - nextcloud_db
 
@@ -149,7 +147,7 @@ services:
       - traefik.http.routers.torrent.rule=Host(`torrent.${HOST}`)
       - traefik.http.routers.torrent.entrypoints=websecure
       - traefik.http.routers.torrent.tls.certresolver=myresolver
-      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${HOST}/'
+      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=http://login.${HOST}/'
       - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
       - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
       - traefik.http.routers.torrent.middlewares=authelia
@@ -170,7 +168,7 @@ services:
       - traefik.http.routers.searcher.entrypoints=websecure
       - traefik.http.routers.searcher.tls.certresolver=myresolver
       - traefik.http.services.searcher.loadbalancer.server.port=3000
-      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https://login.${HOST}/'
+      - 'traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=http://login.${HOST}/'
       - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
       - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
       - traefik.http.routers.searcher.middlewares=authelia
