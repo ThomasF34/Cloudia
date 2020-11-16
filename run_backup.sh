@@ -7,7 +7,15 @@ else
   RECIPIENT="${RECIPIENT_ID}"
 fi
 
+if [[ -z "${CHECK_URL}" ]]; then
+  echo "ERROR: Please provide CHECK_URL if you want to monitor your cron"
+fi
+
 echo "Begin BACKUP"
+if [[ -z "${CHECK_URL}" ]]; then
+  echo "Sending start signal to CHECK URL"
+  curl -fsS -m 10 --retry 5 -o /dev/null ${CHECK_URL}/start
+fi
 
 DATE=$(date +%Y%m%d%H%M%S)
 echo "Create folder $DATE"
@@ -37,4 +45,8 @@ sudo rm -rf $FOLDER.tar.gz
 
 echo "Sync Encrypted folder with BackBlaze"
 rclone copy /media/Data/BACKUPS/Encrypted Backup_B2:cloud-backup-nelands
+if [[ -z "${CHECK_URL}" ]]; then
+  echo "Sending end signal to CHECK URL"
+  curl -fsS -m 10 --retry 5 -o /dev/null ${CHECK_URL}/$?
+fi
 echo "Backup sent to BackBlaze bucket"
