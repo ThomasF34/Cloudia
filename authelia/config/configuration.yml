@@ -4,7 +4,7 @@
 
 host: 0.0.0.0
 port: 9091
-default_redirection_url: https://login.nelands.me
+default_redirection_url: https://login.nelands.net
 totp:
   issuer: authelia.com
 
@@ -16,7 +16,7 @@ access_control:
   default_policy: one_factor
   rules:
     # Rules applied to everyone
-    - domain: searcher.nelands.me
+    - domain: searcher.nelands.net
       policy: one_factor
 
 session:
@@ -25,7 +25,7 @@ session:
   # secret: unsecure_session_secret
   expiration: 3600 # 1 hour
   inactivity: 300 # 5 minutes
-  domain: nelands.me # Should match whatever your root protected domain is
+  domain: nelands.net # Should match whatever your root protected domain is
 
   redis:
     host: authelia_redis
@@ -53,6 +53,6 @@ notifier:
     username: thomas.falcone06@gmail.com
     # Password can also be set using a secret: https://docs.authelia.com/configuration/secrets.html
     # password: yourapppassword
-    sender: admin@nelands.me
+    sender: admin@nelands.net
     host: smtp.gmail.com
     port: 587

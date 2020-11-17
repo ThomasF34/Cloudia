@@ -65,7 +65,7 @@ services:
     labels:
       - 'traefik.enable=true'
       - 'traefik.http.routers.authelia.rule=Host(`login.${HOST}`)'
-      - 'traefik.http.routers.authelia.entrypoints=web'
+      - 'traefik.http.routers.authelia.entrypoints=websecure'
       - traefik.http.routers.authelia.tls.certresolver=myresolver
     expose:
       - 9091
