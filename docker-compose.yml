@@ -22,8 +22,8 @@ services:
       - --certificatesresolvers.myresolver.acme.storage=/letsencrypt/acme.json
     ports:
       - 8080:8080
-      - 443:443
-      - 80:80
+      - 8443:443
+      - 8880:80
     networks:
       - net
     volumes:
@@ -82,21 +82,17 @@ services:
     networks:
       - net
     volumes:
-      - /media/Data/Nextcloud/db:/var/lib/mysql
+      - /media/Data/Nextcloud/db:/var/lib/postgresql/data
     env_file:
       - .env.cloud
-    restart: on-failure
+    restart: unless-stopped
   cloud:
     image: nextcloud
-    environment:
-      - POSTGRES_HOST=nextcloud_db
-    env_file:
-      - .env.cloud
     networks:
       - net
     volumes:
       - /media/Data/Nextcloud/data:/var/www/html
-    restart: on-failure
+    restart: unless-stopped
     labels:
       - traefik.enable=true
       - traefik.http.routers.cloud.rule=Host(`cloud.${HOST}`)
@@ -174,4 +170,14 @@ services:
       - 'traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true'
       - 'traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User, Remote-Groups, Remote-Name, Remote-Email'
       - traefik.http.routers.searcher.middlewares=authelia
+
+  monitor:
+    image: portainer/portainer-ce
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/pi/portainer:/data
+    ports:
+      - 9000:9000
+
 
