@@ -1,6 +1,8 @@
 # Cloudia
 Personal home cloud eco-system
 
+![Cloudia](https://static.wikia.nocookie.net/dark-netflix/images/1/18/Claudia_2019.png/revision/latest?cb=20200629193350)
+
 ## Todo
 
 - [x] :gear: Self Hosted Cloud system (Nextcloud)
@@ -45,6 +47,17 @@ Personal home cloud eco-system
 
 - Logs in checks
 - Rclone install instruction
+	```
+	curl https://rclone.org/install.sh | sudo bash
+	rclone config
+	```
 - No sudo since key would not be in root folder
-- Remove file after 5days
+	```
+	gpg --homedir="/home/pi"
+	```
+- Remove file after 5 days
+	```
+	IF rclone --max-age 5d ls Backup_B2:cloud-backup-nelands | wc -l > 3
+	THEN rclone --min-age 5d delete Backup_B2:cloud-backup-nelands
+	```
 - Choice of which folder with names

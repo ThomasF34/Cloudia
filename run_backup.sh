@@ -38,7 +38,7 @@ sudo tar cvzf $FOLDER.tar.gz $FOLDER
 echo "Remove folder"
 sudo rm -rf $FOLDER
 echo "Encrypt tarball"
-sudo gpg -r $RECIPIENT -o /media/Data/BACKUPS/Encrypted/backup_$DATE.pgp -e $FOLDER.tar.gz
+sudo gpg --homedir="/home/pi" -r $RECIPIENT -o /media/Data/BACKUPS/Encrypted/backup_$DATE.pgp -e $FOLDER.tar.gz
 echo "Remove tarball"
 sudo rm -rf $FOLDER.tar.gz
 
