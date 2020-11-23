@@ -15,20 +15,36 @@ Personal home cloud eco-system
 
 ## Not yet w/ Docker Compose
 
-- [ ] Encrypted automated backup system (Duplicati)
-- [ ] Password platform (Bitwarden)
+- [ ] Encrypted automated backup system (RClone + script)
+- [ ] Dashboard using SUI
+- [ ] Evolution of Autorrent
+	- [ ] Current research in input
+	- [ ] Loading animation
+	- [ ] TVShows and Films choice
+	- [ ] Not more link in Nav expect its adapting to user host
 - [ ] Activate metrics on Traefik Dashboard (tracing?)
+- [ ] Script to input env var and secrets
 
 ## Note - Must appear in doc
 
 - Dependencies
-	- Docker compose
+	- Docker compose installation
 	```bash
 		sudo apt-get install -y python3 python3-pip
 		sudo pip3 -v install docker-compose
 	```
-  - Docker Compose volumes problem
-  ```bash
-    # in /etc/fstab Option to mount your disk
-    UUID=uuid /mnt/dir ntfs defaults,auto,users,rw,nofail,umask=000 0 0
-  ```
+	- Rclone TODO
+
+	- Mouting HDD
+	```bash
+	# in /etc/fstab Option to mount your disk
+	UUID=uuid /mnt/dir ext4 defaults 0 0
+	```
+
+## Backup - Todo
+
+- Logs in checks
+- Rclone install instruction
+- No sudo since key would not be in root folder
+- Remove file after 5days
+- Choice of which folder with names
