@@ -1,5 +1,15 @@
 #!/bin/bash
 
+log()
+{
+  LOGS=$@
+  echo $(date -u) "Sending logs: $LOGS"
+  if [[ -n "${CHECK_URL}" ]]; then
+    echo "Sending start signal to CHECK URL"
+    curl -fsS -m 10 --retry 5 --data-raw "$LOGS" -o /dev/null ${CHECK_URL}
+  fi
+}
+
 if [[ -z "${RECIPIENT_ID}" ]]; then
   echo "ERROR: Please provide RECIPIENT_ID env var"
   exit 1
@@ -38,15 +48,29 @@ sudo tar cvzf $FOLDER.tar.gz $FOLDER
 echo "Remove folder"
 sudo rm -rf $FOLDER
 echo "Encrypt tarball"
-sudo gpg --homedir="/home/pi" -r $RECIPIENT -o /media/Data/BACKUPS/Encrypted/backup_$DATE.pgp -e $FOLDER.tar.gz
+gpg -r $RECIPIENT -o /media/Data/BACKUPS/Encrypted/backup_$DATE.pgp -e $FOLDER.tar.gz
 echo "Remove tarball"
 sudo rm -rf $FOLDER.tar.gz
 
-
 echo "Sync Encrypted folder with BackBlaze"
 rclone copy /media/Data/BACKUPS/Encrypted Backup_B2:cloud-backup-nelands
+UPLOAD_STATE=$?
+if [[ $? -eq 0 ]]; then
+  echo "Upload succesful"
+  rm /media/Data/BACKUPS/Encrypted/*
+fi
+
+BACKUP_OLD_COUNT=$(rclone --max-age 5d ls Backup_B2:cloud-backup-nelands | wc -l)
+if [ $BACKUP_OLD_COUNT -gt 3 ]; then
+  echo $(date -u) ": Remove old backups"
+  log "Remove old backups"
+  rclone --min-age=5d delete Backup_B2:cloud-backup-nelands
+else
+  log "Not enough recent backups - No deletion"
+fi
+
 if [[ -n "${CHECK_URL}" ]]; then
   echo "Sending end signal to CHECK URL"
-  curl -fsS -m 10 --retry 5 -o /dev/null ${CHECK_URL}/$?
+  curl -fsS -m 10 --retry 5 -o /dev/null ${CHECK_URL}/$UPLOAD_STATE
 fi
 echo "Backup sent to BackBlaze bucket"

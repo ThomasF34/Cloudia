@@ -31,6 +31,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - authelia
+    restart: unless-stopped
   
   authelia_db:
     image: postgres
@@ -40,7 +41,7 @@ services:
       - /home/pi/authelia/db:/var/lib/mysql
     env_file:
       - .env.auth.db
-    restart: on-failure
+    restart: unless-stopped
   authelia_redis:
     image: redis:alpine
     command: redis-server --requirepass ${REDIS_PASSWORD}
@@ -112,7 +113,7 @@ services:
       - net
     env_file:
       - .env.jellyfin
-    restart: always
+    restart: unless-stopped
     devices:
       - "/dev/video10:/dev/video10"
       - "/dev/video11:/dev/video11"
@@ -139,7 +140,7 @@ services:
       driver: json-file
       options:
         max-size: 10m
-    restart: always
+    restart: unless-stopped
     labels:
       - traefik.enable=true
       - traefik.http.routers.torrent.rule=Host(`torrent.${HOST}`)
@@ -159,7 +160,7 @@ services:
       - net
     links:
       - torrent
-    restart: always
+    restart: unless-stopped
     labels:
       - traefik.enable=true
       - traefik.http.routers.searcher.rule=Host(`searcher.${HOST}`)
