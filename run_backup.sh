@@ -12,6 +12,13 @@ log()
 log "Starting backup script"
 
 
+if [[ -z "${BACKUP_DIRS}" ]]; then
+  log "ERROR: Please provide BACKUP_DIRS env var"
+  exit 1
+else
+  BACKUPDIRS="${BACKUP_DIRS}"
+fi
+
 if [[ -z "${RECIPIENT_ID}" ]]; then
   log "ERROR: Please provide RECIPIENT_ID env var"
   exit 1
@@ -34,25 +41,38 @@ log "Create folder $DATE"
 FOLDER="/media/Data/BACKUPS/backup_$DATE"
 sudo mkdir $FOLDER/
 
+backup()
+{
+	BACKUP_DIR=$1
+	BACKUP_NAME=$2
 
-log "Put nextcloud into maintenance mode"
-docker exec -u 33 -it cloudia_cloud_1 php occ maintenance:mode --on
+	log "Put nextcloud into maintenance mode"
+	docker exec -u 33 -it cloudia_cloud_1 php occ maintenance:mode --on
 
-log "Backup nextcloud"
-sudo rsync -Aavx /media/Data/Nextcloud/data/data/Nelands/files $FOLDER/nextcloud_files/
+	FULL_BACKUP_DIR=$FOLDER/$BACKUP_NAME
+	log "Backup $BACKUP_NAME"
+	sudo rsync -Aavx $BACKUP_DIR $FULL_BACKUP_DIR
 
-log "Put nextcloud out of maintenance mode"
-docker exec -u 33 -it cloudia_cloud_1 php occ maintenance:mode --off
+	log "Put nextcloud out of maintenance mode"
+	docker exec -u 33 -it cloudia_cloud_1 php occ maintenance:mode --off
 
 
-log "Create tarball"
-sudo tar cvzf $FOLDER.tar.gz $FOLDER
-log "Remove folder"
-sudo rm -rf $FOLDER
-log "Encrypt tarball"
-gpg -r $RECIPIENT -o /media/Data/BACKUPS/Encrypted/backup_$DATE.pgp -e $FOLDER.tar.gz
-log "Remove tarball"
-sudo rm -rf $FOLDER.tar.gz
+	log "Create $FULL_BACKUP_DIR tarball"
+	sudo tar cvzf $FULL_BACKUP_DIR.tar.gz $FULL_BACKUP_DIR
+	log "Remove $FULL_BACKUP_DIR folder"
+	sudo rm -rf $FULL_BACKUP_DIR
+	log "Encrypt $FULL_BACKUP_DIR tarball"
+	gpg -r $RECIPIENT -o /media/Data/BACKUPS/Encrypted/backup_${BACKUP_NAME}_$DATE.pgp -e $FULL_BACKUP_DIR.tar.gz
+	log "Remove $FULL_BACKUP_DIR tarball"
+	sudo rm -rf $FULL_BACKUP_DIR.tar.gz
+}
+
+cat $BACKUPDIRS | while read -r backup; do
+  DIR=$(echo $backup | cut -d ':' -f 1)
+  NAME=$(echo $backup | cut -d ':' -f 2)
+  log "Backuping dir $DIR with name $NAME"
+  backup $DIR $NAME
+done
 
 log "Sync Encrypted folder with BackBlaze"
 rclone copy /media/Data/BACKUPS/Encrypted Backup_B2:cloud-backup-nelands

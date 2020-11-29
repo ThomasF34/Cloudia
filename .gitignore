@@ -12,3 +12,5 @@ authelia/config/secrets/postgres
 authelia/config/users_database.yml
 
 letsencrypt/
+
+backup_dirs
